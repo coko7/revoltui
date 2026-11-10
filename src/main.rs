@@ -49,6 +49,7 @@ fn run(cli: Cli) -> Result<(), String> {
         offline: cli.offline,
     };
     let mut app = App::new(feed, opts, cli.city.join(" "), cli.all, warning);
+    app.set_show_cities(!cli.hide_cities);
     ratatui::run(|terminal| app.run(terminal)).map_err(|e| e.to_string())
 }
 

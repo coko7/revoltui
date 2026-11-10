@@ -211,12 +211,7 @@ impl App {
                 self.show_cities = true;
                 self.focus = Focus::Cities;
             }
-            KeyCode::Char('v') => {
-                self.show_cities = !self.show_cities;
-                if !self.show_cities && self.focus == Focus::Cities {
-                    self.focus = Focus::Events;
-                }
-            }
+            KeyCode::Char('v') => self.set_show_cities(!self.show_cities),
             KeyCode::Tab => self.shift_focus(1, true),
             KeyCode::BackTab => self.shift_focus(-1, true),
             KeyCode::Left | KeyCode::Char('h') => self.shift_focus(-1, false),
@@ -235,6 +230,14 @@ impl App {
             KeyCode::Char('r') => self.manual_refresh(),
             KeyCode::Char('o') => self.open_selected(),
             _ => {}
+        }
+    }
+
+    /// Shows or hides the city list; focus leaves it when hidden.
+    pub fn set_show_cities(&mut self, show: bool) {
+        self.show_cities = show;
+        if !show && self.focus == Focus::Cities {
+            self.focus = Focus::Events;
         }
     }
 

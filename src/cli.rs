@@ -37,4 +37,8 @@ pub struct Cli {
     /// Also show finished events
     #[arg(short, long)]
     pub all: bool,
+
+    /// Start with the city list hidden (toggle it with v)
+    #[arg(short = 'c', long)]
+    pub hide_cities: bool,
 }

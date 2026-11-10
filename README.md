@@ -44,6 +44,7 @@ so `lyon`, `st-nazaire` or `baule` all work. Leave it out to browse every city.
 ```sh
 revoltui                     # every city
 revoltui paris               # start filtered on Paris
+revoltui -c paris            # same, with the city list hidden
 revoltui -a lyon             # include events that already ended today
 revoltui -m 10 rennes        # refresh the data when it is older than 10 minutes
 revoltui -n                  # offline: use the last downloaded copy only
@@ -60,6 +61,7 @@ curl -s https://www.manifsendirect.fr/data/events.json | revoltui -f -
 | `-r`, `--refresh` | Re-download the data now |
 | `-n`, `--offline` | Never download, use the local copy as is |
 | `-a`, `--all` | Also show events that have ended |
+| `-c`, `--hide-cities` | Start with the city list hidden (`v` shows it again) |
 | `-h`, `--help` | Show help |
 | `-V`, `--version` | Show the version |
 
