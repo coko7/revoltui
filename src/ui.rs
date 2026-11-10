@@ -1,8 +1,11 @@
 use ratatui::Frame;
-use ratatui::layout::{Constraint, Layout, Rect};
+use ratatui::layout::{Constraint, Layout, Margin, Rect};
 use ratatui::style::{Color, Style, Stylize};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, HighlightSpacing, List, ListItem, Paragraph, Wrap};
+use ratatui::widgets::{
+    Block, HighlightSpacing, List, ListItem, Paragraph, Scrollbar, ScrollbarOrientation,
+    ScrollbarState, Wrap,
+};
 
 use crate::app::{App, Focus};
 use crate::data::{self, Bucket, Event, Origin};
@@ -197,17 +200,46 @@ fn event_row(e: &Event, today: &str, tag_w: usize, when_w: usize) -> ListItem<'s
     ]))
 }
 
-fn draw_detail(f: &mut Frame, app: &App, area: Rect) {
-    let block = pane(Line::from(" Détail ").bold(), false);
-    let Some(e) = app.selected_event() else {
+fn draw_detail(f: &mut Frame, app: &mut App, area: Rect) {
+    let block = pane(Line::from(" Détail ").bold(), app.focus == Focus::Detail);
+    let Some(lines) = app
+        .selected_event()
+        .map(|e| detail_lines(e, app.feed.today()))
+    else {
         f.render_widget(Paragraph::new("—".dim()).block(block), area);
         return;
     };
 
+    let inner = block.inner(area);
+    let paragraph = Paragraph::new(lines).wrap(Wrap { trim: false });
+    let max_scroll = paragraph
+        .line_count(inner.width)
+        .saturating_sub(inner.height as usize);
+    app.detail_scroll = app
+        .detail_scroll
+        .min(u16::try_from(max_scroll).unwrap_or(u16::MAX));
+    f.render_widget(paragraph.block(block).scroll((app.detail_scroll, 0)), area);
+
+    if max_scroll > 0 {
+        let mut state = ScrollbarState::new(max_scroll + 1)
+            .position(app.detail_scroll as usize)
+            .viewport_content_length(inner.height as usize);
+        let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+            .begin_symbol(None)
+            .end_symbol(None);
+        let track = area.inner(Margin {
+            vertical: 1,
+            horizontal: 0,
+        });
+        f.render_stateful_widget(scrollbar, track, &mut state);
+    }
+}
+
+fn detail_lines(e: &Event, today: &str) -> Vec<Line<'static>> {
     let mut head = vec![
         Span::styled(format!("[{}]", e.tag()), type_style(&e.kind)),
         Span::raw("  "),
-        Span::raw(e.when(app.feed.today())).bold(),
+        Span::raw(e.when(today)).bold(),
     ];
     if let Some(end) = e.end_hint() {
         head.push(Span::raw(" "));
@@ -255,13 +287,7 @@ fn draw_detail(f: &mut Frame, app: &App, area: Rect) {
     if let Some(url) = e.latest_url() {
         lines.push(Line::from(Span::raw(url.to_string()).dim().underlined()));
     }
-
-    f.render_widget(
-        Paragraph::new(lines)
-            .block(block)
-            .wrap(Wrap { trim: false }),
-        area,
-    );
+    lines
 }
 
 fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
@@ -280,9 +306,14 @@ fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
         } else {
             "terminés"
         };
+        let arrows = if app.focus == Focus::Detail {
+            "défiler"
+        } else {
+            "naviguer"
+        };
         keys(&[
             ("/", "chercher"),
-            ("↑↓", "naviguer"),
+            ("↑↓", arrows),
             ("⇥", "panneau"),
             ("a", ended),
             ("r", "rafraîchir"),

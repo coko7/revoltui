@@ -25,6 +25,23 @@ pub struct Options {
 pub enum Focus {
     Cities,
     Events,
+    Detail,
+}
+
+impl Focus {
+    fn left(self) -> Self {
+        match self {
+            Focus::Cities | Focus::Events => Focus::Cities,
+            Focus::Detail => Focus::Events,
+        }
+    }
+
+    fn right(self) -> Self {
+        match self {
+            Focus::Cities => Focus::Events,
+            Focus::Events | Focus::Detail => Focus::Detail,
+        }
+    }
 }
 
 pub struct Status {
@@ -44,6 +61,8 @@ pub struct App {
     pub event_state: ListState,
     /// Index into `flat_events()`.
     pub event_sel: usize,
+    /// First visible line of the detail pane; clamped to the content when drawn.
+    pub detail_scroll: u16,
     pub status: Option<Status>,
     pub opts: Options,
     pending: Option<Receiver<Result<Feed, String>>>,
@@ -70,6 +89,7 @@ impl App {
             city_state: ListState::default().with_selected(Some(0)),
             event_state: ListState::default(),
             event_sel: 0,
+            detail_scroll: 0,
             status: warning.map(|text| Status { text, error: true }),
             opts,
             pending: None,
@@ -189,14 +209,20 @@ impl App {
                 self.searching = true;
                 self.focus = Focus::Cities;
             }
-            KeyCode::Tab | KeyCode::BackTab => {
+            KeyCode::Tab => {
                 self.focus = match self.focus {
-                    Focus::Cities => Focus::Events,
-                    Focus::Events => Focus::Cities,
+                    Focus::Detail => Focus::Cities,
+                    f => f.right(),
                 }
             }
-            KeyCode::Left | KeyCode::Char('h') => self.focus = Focus::Cities,
-            KeyCode::Right | KeyCode::Char('l') | KeyCode::Enter => self.focus = Focus::Events,
+            KeyCode::BackTab => {
+                self.focus = match self.focus {
+                    Focus::Cities => Focus::Detail,
+                    f => f.left(),
+                }
+            }
+            KeyCode::Left | KeyCode::Char('h') => self.focus = self.focus.left(),
+            KeyCode::Right | KeyCode::Char('l') | KeyCode::Enter => self.focus = self.focus.right(),
             KeyCode::Down | KeyCode::Char('j') => self.move_by(1),
             KeyCode::Up | KeyCode::Char('k') => self.move_by(-1),
             KeyCode::PageDown => self.move_by(10),
@@ -219,7 +245,15 @@ impl App {
             Focus::Cities => self.move_city(delta),
             Focus::Events => {
                 let n = self.flat_events().len();
-                self.event_sel = step(self.event_sel, delta, n);
+                let next = step(self.event_sel, delta, n);
+                if next != self.event_sel {
+                    self.event_sel = next;
+                    self.detail_scroll = 0;
+                }
+            }
+            Focus::Detail => {
+                let next = (self.detail_scroll as isize).saturating_add(delta);
+                self.detail_scroll = next.clamp(0, u16::MAX as isize) as u16;
             }
         }
     }
@@ -243,6 +277,7 @@ impl App {
     fn reset_events(&mut self) {
         self.event_sel = 0;
         self.event_state = ListState::default();
+        self.detail_scroll = 0;
     }
 
     /// Selected city and event id, to find them again after the data changes.
@@ -516,5 +551,41 @@ mod tests {
         // selection survives a reload
         app.set_feed(data::parse(FIXTURE.as_bytes()).unwrap());
         assert_eq!(app.selected_event().map(|e| e.id.as_str()), Some("b"));
+    }
+
+    #[test]
+    fn scrolls_detail() {
+        let mut app = app(data::parse(FIXTURE.as_bytes()).unwrap());
+        // small terminal: the detail pane only fits a few of its lines
+        let s = screen(&mut app, 120, 16);
+        assert!(
+            s.contains("→ fin estimée ~17:00") && !s.contains("https://b.example/2"),
+            "{s}"
+        );
+
+        press(&mut app, KeyCode::Tab);
+        press(&mut app, KeyCode::Tab);
+        assert_eq!(app.focus, Focus::Detail);
+        press(&mut app, KeyCode::Char('G'));
+        let s = screen(&mut app, 120, 16);
+        assert!(
+            app.detail_scroll > 0 && app.detail_scroll < u16::MAX,
+            "scroll clamped to content"
+        );
+        assert!(
+            !s.contains("→ fin estimée ~17:00") && s.contains("https://b.example/2"),
+            "{s}"
+        );
+
+        press(&mut app, KeyCode::Char('g'));
+        let s = screen(&mut app, 120, 16);
+        assert!(s.contains("→ fin estimée ~17:00"), "{s}");
+
+        // picking another event starts its detail from the top
+        press(&mut app, KeyCode::Char('G'));
+        screen(&mut app, 120, 16);
+        press(&mut app, KeyCode::Char('h'));
+        press(&mut app, KeyCode::Down);
+        assert_eq!(app.detail_scroll, 0);
     }
 }

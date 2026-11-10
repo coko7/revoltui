@@ -6,7 +6,7 @@ description = "TUI for current and upcoming mobilisations from manifsendirect.fr
 
 [dependencies]
 clap = { version = "4.6.7", features = ["derive"] }
-ratatui = "0.30.2"
+ratatui = { version = "0.30.2", features = ["unstable-rendered-line-info"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 ureq = "3.5.1"
