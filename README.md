@@ -6,8 +6,7 @@
 
 An **unofficial** terminal interface for [manifsendirect.fr](https://www.manifsendirect.fr)
 
-Browse ongoing and upcoming mobilisations (marches, rallies, strikes, blockades…) city by city,
-without leaving your terminal.
+Browse ongoing and upcoming mobilisations (marches, rallies, strikes, blockades…), without leaving your terminal.
 
 <img alt="revoltui screenshot" src="assets/screenshot.webp" />
 

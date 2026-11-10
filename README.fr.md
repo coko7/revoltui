@@ -6,8 +6,7 @@
 
 Une interface terminal **non officielle** pour [manifsendirect.fr](https://www.manifsendirect.fr)
 
-Suivez les mobilisations en cours et à venir (cortèges, rassemblements, grèves, blocages…) ville
-par ville, sans quitter votre terminal.
+Suivez les mobilisations en cours et à venir (cortèges, rassemblements, grèves, blocages…), sans quitter votre terminal.
 
 <img alt="capture d'écran de revoltui" src="assets/screenshot.webp" />
 
