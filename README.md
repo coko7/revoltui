@@ -2,7 +2,9 @@
 
 # ✊ revoltui
 
-An **unofficial** terminal interface for [manifsendirect.fr](https://www.manifsendirect.fr).
+**English** · [Français](README.fr.md)
+
+An **unofficial** terminal interface for [manifsendirect.fr](https://www.manifsendirect.fr)
 
 Browse ongoing and upcoming mobilisations (marches, rallies, strikes, blockades…) city by city,
 without leaving your terminal.
@@ -15,7 +17,7 @@ without leaving your terminal.
 </div>
 
 > [!NOTE]
-> revoltui is not affiliated with [manifsendirect.fr](https://manifsdirect.fr).
+> `revoltui` is not affiliated with [manifsendirect.fr](https://manifsdirect.fr).
 >
 > All data comes from the site's public feed and belongs to its authors. The interface itself is in French, like the data it shows.
 
