@@ -71,7 +71,7 @@ The `MANIFS_URL` environment variable overrides the address the data is download
   local copy is.
 - **Villes** (left): cities with something going on. The red number counts events happening now,
   the blue one upcoming events. The top row, *Toutes les villes*, shows every city in the list at
-  once.
+  once. Press `v` to hide the list and give the events the full width.
 - **Events** (top right): the selected city's events, grouped into *En cours* (ongoing),
   *À venir* (upcoming) and, when enabled, *Terminé* (ended). The colour of the tag gives the type
   of event: cortège, rassemblement, grève, blocage, incident, annonce.
@@ -85,6 +85,7 @@ The `MANIFS_URL` environment variable overrides the address the data is download
 | Key | Action |
 | --- | --- |
 | `/` | Search cities. Type to filter, `Enter` to keep the filter, `Esc` to clear it |
+| `v` | Show or hide the city list |
 | `Tab` / `Shift+Tab` | Next / previous pane |
 | `h` `l` / `←` `→` | Move to the pane on the left / right (`Enter` also moves right) |
 | `j` `k` / `↓` `↑` | Move the selection, or scroll the detail pane |

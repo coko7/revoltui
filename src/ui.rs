@@ -28,19 +28,29 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         .max()
         .unwrap_or(0)
         .clamp(ALL_CITIES.len(), 26);
-    let cities_w = (name_w as u16 + 12).min(body.width / 2);
+    let cities_w = if app.show_cities {
+        (name_w as u16 + 12).min(body.width / 2)
+    } else {
+        0
+    };
     let [left, right] =
         Layout::horizontal([Constraint::Length(cities_w), Constraint::Min(0)]).areas(body);
     let [events, detail] =
         Layout::vertical([Constraint::Percentage(55), Constraint::Percentage(45)]).areas(right);
     app.rows = PaneRows {
-        cities: left.height.saturating_sub(2),
+        cities: if app.show_cities {
+            left.height.saturating_sub(2)
+        } else {
+            0
+        },
         events: events.height.saturating_sub(2),
         detail: detail.height.saturating_sub(2),
     };
 
     draw_header(f, app, header);
-    draw_cities(f, app, left, name_w);
+    if app.show_cities {
+        draw_cities(f, app, left, name_w);
+    }
     draw_events(f, app, events);
     draw_detail(f, app, detail);
     draw_footer(f, app, footer);
@@ -320,6 +330,7 @@ fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
             ("/", "chercher"),
             ("↑↓", arrows),
             ("⇥", "panneau"),
+            ("v", "villes"),
             ("a", ended),
             ("r", "rafraîchir"),
             ("o", "ouvrir"),

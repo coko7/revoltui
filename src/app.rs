@@ -28,22 +28,6 @@ pub enum Focus {
     Detail,
 }
 
-impl Focus {
-    fn left(self) -> Self {
-        match self {
-            Focus::Cities | Focus::Events => Focus::Cities,
-            Focus::Detail => Focus::Events,
-        }
-    }
-
-    fn right(self) -> Self {
-        match self {
-            Focus::Cities => Focus::Events,
-            Focus::Events | Focus::Detail => Focus::Detail,
-        }
-    }
-}
-
 pub struct Status {
     pub text: String,
     pub error: bool,
@@ -63,6 +47,7 @@ pub struct App {
     pub filter: String,
     pub searching: bool,
     pub show_ended: bool,
+    pub show_cities: bool,
     pub focus: Focus,
     /// Row 0 is "all cities", row `i + 1` is `visible_cities()[i]`.
     pub city_state: ListState,
@@ -95,6 +80,7 @@ impl App {
             filter,
             searching: false,
             show_ended,
+            show_cities: true,
             focus: Focus::Cities,
             city_state: ListState::default().with_selected(Some(0)),
             event_state: ListState::default(),
@@ -222,22 +208,19 @@ impl App {
             KeyCode::Esc if !self.filter.is_empty() => self.set_filter(String::new()),
             KeyCode::Char('/') => {
                 self.searching = true;
+                self.show_cities = true;
                 self.focus = Focus::Cities;
             }
-            KeyCode::Tab => {
-                self.focus = match self.focus {
-                    Focus::Detail => Focus::Cities,
-                    f => f.right(),
+            KeyCode::Char('v') => {
+                self.show_cities = !self.show_cities;
+                if !self.show_cities && self.focus == Focus::Cities {
+                    self.focus = Focus::Events;
                 }
             }
-            KeyCode::BackTab => {
-                self.focus = match self.focus {
-                    Focus::Cities => Focus::Detail,
-                    f => f.left(),
-                }
-            }
-            KeyCode::Left | KeyCode::Char('h') => self.focus = self.focus.left(),
-            KeyCode::Right | KeyCode::Char('l') | KeyCode::Enter => self.focus = self.focus.right(),
+            KeyCode::Tab => self.shift_focus(1, true),
+            KeyCode::BackTab => self.shift_focus(-1, true),
+            KeyCode::Left | KeyCode::Char('h') => self.shift_focus(-1, false),
+            KeyCode::Right | KeyCode::Char('l') | KeyCode::Enter => self.shift_focus(1, false),
             KeyCode::Down | KeyCode::Char('j') => self.move_by(1),
             KeyCode::Up | KeyCode::Char('k') => self.move_by(-1),
             KeyCode::PageDown => self.move_by(10),
@@ -253,6 +236,23 @@ impl App {
             KeyCode::Char('o') => self.open_selected(),
             _ => {}
         }
+    }
+
+    /// Moves focus `delta` panes to the right, skipping the city list when hidden.
+    fn shift_focus(&mut self, delta: isize, wrap: bool) {
+        let panes: &[Focus] = if self.show_cities {
+            &[Focus::Cities, Focus::Events, Focus::Detail]
+        } else {
+            &[Focus::Events, Focus::Detail]
+        };
+        let n = panes.len() as isize;
+        let cur = panes.iter().position(|&p| p == self.focus).unwrap_or(0) as isize;
+        let next = if wrap {
+            (cur + delta).rem_euclid(n)
+        } else {
+            (cur + delta).clamp(0, n - 1)
+        };
+        self.focus = panes[next as usize];
     }
 
     /// Half the focused pane's height, at least one row.
@@ -639,5 +639,35 @@ mod tests {
         assert_eq!(app.detail_scroll, app.rows.detail / 2);
         ctrl(&mut app, 'u');
         assert_eq!(app.detail_scroll, 0);
+    }
+
+    #[test]
+    fn hides_city_list() {
+        let mut app = app(data::parse(FIXTURE.as_bytes()).unwrap());
+        let legend = "en cours · à venir";
+        assert!(screen(&mut app, 120, 30).contains(legend));
+
+        press(&mut app, KeyCode::Char('v'));
+        let s = screen(&mut app, 120, 30);
+        assert!(!s.contains(legend) && s.contains("EN COURS (1)"), "{s}");
+        // the event list takes the full width
+        assert!(
+            s.lines().nth(1).unwrap().starts_with("┌ Toutes les villes"),
+            "{s}"
+        );
+        assert_eq!(app.focus, Focus::Events, "focus leaves the hidden pane");
+
+        // focus moves skip the hidden pane
+        press(&mut app, KeyCode::Char('h'));
+        assert_eq!(app.focus, Focus::Events);
+        press(&mut app, KeyCode::Tab);
+        assert_eq!(app.focus, Focus::Detail);
+        press(&mut app, KeyCode::Tab);
+        assert_eq!(app.focus, Focus::Events);
+
+        // searching brings it back
+        press(&mut app, KeyCode::Char('/'));
+        assert!(app.show_cities && app.focus == Focus::Cities);
+        assert!(screen(&mut app, 120, 30).contains(legend));
     }
 }
