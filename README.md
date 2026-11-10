@@ -1,3 +1,5 @@
+<div align="center">
+
 # ✊ revoltui
 
 An **unofficial** terminal interface for [manifsendirect.fr](https://www.manifsendirect.fr):
@@ -6,6 +8,13 @@ without leaving your terminal.
 
 > revoltui is not affiliated with manifsendirect.fr. All data comes from the site's public feed
 > and belongs to its authors. The interface itself is in French, like the data it shows.
+
+<img alt="revoltui screenshot" src="assets/screenshot.webp" />
+
+[![License: MIT](https://img.shields.io/github/license/coko7/revoltui?color=blue)](LICENSE)
+![Rust](https://img.shields.io/github/languages/top/coko7/revoltui?color=orange)
+
+</div>
 
 ## Installation
 
