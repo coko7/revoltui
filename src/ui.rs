@@ -1,5 +1,3 @@
-//! Rendering.
-
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Style, Stylize};
@@ -64,15 +62,21 @@ fn draw_header(f: &mut Frame, app: &App, area: Rect) {
     if app.is_refreshing() {
         spans.push(Span::raw(" · mise à jour…").yellow());
     }
-    f.render_widget(Line::from(spans), area);
+    f.render_widget(Line::from(spans).centered(), area);
 }
 
 fn draw_cities(f: &mut Frame, app: &mut App, area: Rect, name_w: usize) {
     let visible = app.visible_cities();
-    let (now, next) = visible.iter().fold((0, 0), |(n, x), c| (n + c.now, x + c.next));
+    let (now, next) = visible
+        .iter()
+        .fold((0, 0), |(n, x), c| (n + c.now, x + c.next));
     let mut items = vec![city_row(ALL_CITIES, now, next, name_w, true)];
     items.extend(visible.iter().map(|c| {
-        let name = if c.name.is_empty() { "(ville n.c.)" } else { &c.name };
+        let name = if c.name.is_empty() {
+            "(ville n.c.)"
+        } else {
+            &c.name
+        };
         city_row(name, c.now, c.next, name_w, false)
     }));
 
@@ -143,14 +147,20 @@ fn draw_events(f: &mut Frame, app: &mut App, area: Rect) {
         .max()
         .unwrap_or(0)
         .min(TAG_MAX);
-    let when_w = all.map(|e| e.when(&today).chars().count()).max().unwrap_or(0);
+    let when_w = all
+        .map(|e| e.when(&today).chars().count())
+        .max()
+        .unwrap_or(0);
 
     let mut items = Vec::new();
     let mut selected = None;
     let mut idx = 0;
     for (bucket, evs) in &sections {
         let heading = format!("━━ {} ({})", bucket.heading(), evs.len());
-        items.push(ListItem::new(Line::from(Span::styled(heading, section_style(*bucket)))));
+        items.push(ListItem::new(Line::from(Span::styled(
+            heading,
+            section_style(*bucket),
+        ))));
         if evs.is_empty() {
             items.push(ListItem::new(Line::from("   rien de signalé".dim())));
         }
@@ -176,7 +186,10 @@ fn event_row(e: &Event, today: &str, tag_w: usize, when_w: usize) -> ListItem<'s
     let faded = e.probably_ended() || e.bucket() == Bucket::Ended;
     let title = Span::raw(e.title.clone());
     ListItem::new(Line::from(vec![
-        Span::styled(format!("{:<tag_w$}", truncate(&format!("[{}]", e.tag()), tag_w)), type_style(&e.kind)),
+        Span::styled(
+            format!("{:<tag_w$}", truncate(&format!("[{}]", e.tag()), tag_w)),
+            type_style(&e.kind),
+        ),
         Span::raw(" "),
         Span::raw(format!("{:<when_w$}", e.when(today))).bold(),
         Span::raw("  "),
@@ -205,9 +218,15 @@ fn draw_detail(f: &mut Frame, app: &App, area: Rect) {
     }
 
     let field = |label: &str, value: String| {
-        Line::from(vec![Span::raw(format!("{label:<6}")).dim(), Span::raw(value)])
+        Line::from(vec![
+            Span::raw(format!("{label:<6}")).dim(),
+            Span::raw(value),
+        ])
     };
-    let mut lines = vec![Line::from(head), Line::from(Span::raw(e.title.clone()).bold())];
+    let mut lines = vec![
+        Line::from(head),
+        Line::from(Span::raw(e.title.clone()).bold()),
+    ];
     if !e.city.is_empty() {
         lines.push(field("ville", e.city.clone()));
     }
@@ -237,17 +256,30 @@ fn draw_detail(f: &mut Frame, app: &App, area: Rect) {
         lines.push(Line::from(Span::raw(url.to_string()).dim().underlined()));
     }
 
-    f.render_widget(Paragraph::new(lines).block(block).wrap(Wrap { trim: false }), area);
+    f.render_widget(
+        Paragraph::new(lines)
+            .block(block)
+            .wrap(Wrap { trim: false }),
+        area,
+    );
 }
 
 fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
     let line = if let Some(status) = &app.status {
         let text = Span::raw(status.text.clone());
-        Line::from(if status.error { text.yellow() } else { text.green() })
+        Line::from(if status.error {
+            text.yellow()
+        } else {
+            text.green()
+        })
     } else if app.searching {
         keys(&[("Entrée", "valider"), ("Échap", "effacer"), ("↑↓", "ville")])
     } else {
-        let ended = if app.show_ended { "masquer terminés" } else { "terminés" };
+        let ended = if app.show_ended {
+            "masquer terminés"
+        } else {
+            "terminés"
+        };
         keys(&[
             ("/", "chercher"),
             ("↑↓", "naviguer"),
@@ -258,27 +290,36 @@ fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
             ("q", "quitter"),
         ])
     };
-    f.render_widget(line, area);
+    f.render_widget(line.centered(), area);
 }
 
 fn keys(pairs: &[(&str, &str)]) -> Line<'static> {
-    Line::from(
-        pairs
-            .iter()
-            .flat_map(|(k, desc)| {
-                [Span::raw(k.to_string()).cyan().bold(), Span::raw(format!(" {desc}  ")).dim()]
-            })
-            .collect::<Vec<_>>(),
-    )
+    let mut spans = Vec::new();
+    for (i, (k, desc)) in pairs.iter().enumerate() {
+        if i > 0 {
+            spans.push(Span::raw("  "));
+        }
+        spans.push(Span::raw(k.to_string()).cyan().bold());
+        spans.push(Span::raw(format!(" {desc}")).dim());
+    }
+    Line::from(spans)
 }
 
 fn pane(title: Line<'static>, focused: bool) -> Block<'static> {
     let block = Block::bordered().title(title);
-    if focused { block.border_style(Style::new().cyan()) } else { block }
+    if focused {
+        block.border_style(Style::new().cyan())
+    } else {
+        block
+    }
 }
 
 fn highlight(focused: bool) -> Style {
-    if focused { Style::new().reversed() } else { Style::new().bold() }
+    if focused {
+        Style::new().reversed()
+    } else {
+        Style::new().bold()
+    }
 }
 
 fn section_style(bucket: Bucket) -> Style {

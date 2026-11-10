@@ -1,5 +1,3 @@
-//! Application state and key handling.
-
 use std::io;
 use std::process::{Command, Stdio};
 use std::sync::mpsc::{self, Receiver, TryRecvError};
@@ -54,7 +52,13 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(feed: Feed, opts: Options, filter: String, show_ended: bool, warning: Option<String>) -> Self {
+    pub fn new(
+        feed: Feed,
+        opts: Options,
+        filter: String,
+        show_ended: bool,
+        warning: Option<String>,
+    ) -> Self {
         let cities = data::city_summaries(&feed);
         Self {
             feed,
@@ -111,7 +115,11 @@ impl App {
     pub fn sections(&self) -> Vec<(Bucket, Vec<&Event>)> {
         let names: Vec<&str> = match self.selected_city() {
             Some(name) => vec![name],
-            None => self.visible_cities().iter().map(|c| c.name.as_str()).collect(),
+            None => self
+                .visible_cities()
+                .iter()
+                .map(|c| c.name.as_str())
+                .collect(),
         };
         Bucket::ALL
             .into_iter()
@@ -129,7 +137,10 @@ impl App {
     }
 
     pub fn flat_events(&self) -> Vec<&Event> {
-        self.sections().into_iter().flat_map(|(_, evs)| evs).collect()
+        self.sections()
+            .into_iter()
+            .flat_map(|(_, evs)| evs)
+            .collect()
     }
 
     pub fn selected_event(&self) -> Option<&Event> {
@@ -255,7 +266,11 @@ impl App {
     }
 
     fn open_selected(&mut self) {
-        let Some(url) = self.selected_event().and_then(Event::latest_url).map(str::to_owned) else {
+        let Some(url) = self
+            .selected_event()
+            .and_then(Event::latest_url)
+            .map(str::to_owned)
+        else {
             self.set_status("aucun lien pour cet événement", true);
             return;
         };
@@ -282,7 +297,10 @@ impl App {
     }
 
     fn set_status(&mut self, text: &str, error: bool) {
-        self.status = Some(Status { text: text.to_string(), error });
+        self.status = Some(Status {
+            text: text.to_string(),
+            error,
+        });
     }
 
     // ---------- data refresh ----------
@@ -315,7 +333,9 @@ impl App {
     }
 
     fn start_download(&mut self) {
-        let Origin::File(path) = &self.opts.origin else { return };
+        let Origin::File(path) = &self.opts.origin else {
+            return;
+        };
         let (tx, rx) = mpsc::channel();
         let (url, path) = (self.opts.url.clone(), path.clone());
         thread::spawn(move || {
@@ -339,7 +359,10 @@ impl App {
                     self.set_feed(feed);
                     self.set_status("données mises à jour", false);
                 }
-                Err(e) => self.set_status(&format!("échec du téléchargement, données conservées — {e}"), true),
+                Err(e) => self.set_status(
+                    &format!("échec du téléchargement, données conservées — {e}"),
+                    true,
+                ),
             }
             return;
         }
@@ -395,7 +418,12 @@ mod tests {
     }"#;
 
     fn app(feed: Feed) -> App {
-        let opts = Options { origin: Origin::Stdin, url: String::new(), max_age: Duration::ZERO, offline: true };
+        let opts = Options {
+            origin: Origin::Stdin,
+            url: String::new(),
+            max_age: Duration::ZERO,
+            offline: true,
+        };
         App::new(feed, opts, String::new(), false, None)
     }
 
@@ -404,7 +432,13 @@ mod tests {
         terminal.draw(|f| ui::draw(f, app)).unwrap();
         let buf = terminal.backend().buffer();
         (0..h)
-            .map(|y| (0..w).map(|x| buf[(x, y)].symbol()).collect::<String>().trim_end().to_string())
+            .map(|y| {
+                (0..w)
+                    .map(|x| buf[(x, y)].symbol())
+                    .collect::<String>()
+                    .trim_end()
+                    .to_string()
+            })
             .collect::<Vec<_>>()
             .join("\n")
     }
@@ -421,19 +455,45 @@ mod tests {
     fn renders_and_navigates() {
         let mut app = app(data::parse(FIXTURE.as_bytes()).unwrap());
         let s = screen(&mut app, 120, 30);
-        assert!(s.contains("données du 10/11 13:35 · collecteur : ok"), "{s}");
-        assert!(s.contains("EN COURS (1)") && s.contains("À VENIR (2)"), "{s}");
-        assert!(s.contains("Saint-Nazaire") && !s.contains("Lyon") && !s.contains("Nulle-Part"), "{s}");
+        assert!(
+            s.contains("données du 10/11 13:35 · collecteur : ok"),
+            "{s}"
+        );
+        let (first, last) = (s.lines().next().unwrap(), s.lines().last().unwrap());
+        assert!(
+            first.starts_with("   ") && last.starts_with("   "),
+            "header/footer not centered:\n{s}"
+        );
+        assert!(
+            s.contains("EN COURS (1)") && s.contains("À VENIR (2)"),
+            "{s}"
+        );
+        assert!(
+            s.contains("Saint-Nazaire") && !s.contains("Lyon") && !s.contains("Nulle-Part"),
+            "{s}"
+        );
         // first event selected, detail shows it
-        assert!(s.contains("→ fin estimée ~17:00") && s.contains("5 000 (CGT)"), "{s}");
-        assert!(s.contains("✓ confirmé · BFM, Le Parisien") && s.contains("https://b.example/2"), "{s}");
+        assert!(
+            s.contains("→ fin estimée ~17:00") && s.contains("5 000 (CGT)"),
+            "{s}"
+        );
+        assert!(
+            s.contains("✓ confirmé · BFM, Le Parisien") && s.contains("https://b.example/2"),
+            "{s}"
+        );
 
         press(&mut app, KeyCode::Char('/'));
         type_str(&mut app, "st naz");
         press(&mut app, KeyCode::Enter);
         let s = screen(&mut app, 120, 30);
-        assert!(s.contains("Villes « st naz »") && s.contains("[blocage/rond_point]"), "{s}");
-        assert!(s.contains("mer 11/11 06:00") && s.contains("→ ~14:00"), "{s}");
+        assert!(
+            s.contains("Villes « st naz »") && s.contains("[blocage/rond_point]"),
+            "{s}"
+        );
+        assert!(
+            s.contains("mer 11/11 06:00") && s.contains("→ ~14:00"),
+            "{s}"
+        );
         assert!(!s.contains("grève RATP"), "{s}");
 
         press(&mut app, KeyCode::Esc);
@@ -448,7 +508,10 @@ mod tests {
         assert_eq!(app.selected_city(), Some("Paris"));
         assert_eq!(app.selected_event().map(|e| e.id.as_str()), Some("b"));
         let s = screen(&mut app, 120, 30);
-        assert!(s.contains("jeu 12/11") && s.contains("source unique · RATP"), "{s}");
+        assert!(
+            s.contains("jeu 12/11") && s.contains("source unique · RATP"),
+            "{s}"
+        );
 
         // selection survives a reload
         app.set_feed(data::parse(FIXTURE.as_bytes()).unwrap());

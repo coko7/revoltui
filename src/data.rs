@@ -1,5 +1,3 @@
-//! manifsendirect.fr feed: model, local cache and download.
-
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::fs;
@@ -193,14 +191,15 @@ impl Event {
     }
 
     pub fn confirmed(&self) -> bool {
-        self.confirmation
-            .as_ref()
-            .and_then(|c| c.level.as_deref())
-            == Some("confirme")
+        self.confirmation.as_ref().and_then(|c| c.level.as_deref()) == Some("confirme")
     }
 
     pub fn source_names(&self) -> String {
-        let mut names: Vec<&str> = self.sources.iter().filter_map(|s| s.name.as_deref()).collect();
+        let mut names: Vec<&str> = self
+            .sources
+            .iter()
+            .filter_map(|s| s.name.as_deref())
+            .collect();
         names.sort_unstable();
         names.dedup();
         names.join(", ")
@@ -349,7 +348,11 @@ pub fn read_file(path: &Path) -> Result<Feed, String> {
 /// Age of the local copy, `None` when it cannot be read.
 pub fn file_age(path: &Path) -> Option<Duration> {
     let modified = fs::metadata(path).ok()?.modified().ok()?;
-    Some(SystemTime::now().duration_since(modified).unwrap_or_default())
+    Some(
+        SystemTime::now()
+            .duration_since(modified)
+            .unwrap_or_default(),
+    )
 }
 
 /// Missing, empty, or older than `max_age`.
@@ -369,7 +372,11 @@ pub fn has_local_copy(path: &Path) -> bool {
 pub fn download(url: &str, dest: &Path) -> Result<Feed, String> {
     let agent: ureq::Agent = ureq::Agent::config_builder()
         .timeout_global(Some(Duration::from_secs(20)))
-        .user_agent(concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")))
+        .user_agent(concat!(
+            env!("CARGO_PKG_NAME"),
+            "/",
+            env!("CARGO_PKG_VERSION")
+        ))
         .build()
         .into();
     let bytes = agent
@@ -382,7 +389,10 @@ pub fn download(url: &str, dest: &Path) -> Result<Feed, String> {
     if let Some(dir) = dest.parent().filter(|d| !d.as_os_str().is_empty()) {
         fs::create_dir_all(dir).map_err(|e| format!("cannot create '{}': {e}", dir.display()))?;
     }
-    let name = dest.file_name().and_then(|n| n.to_str()).unwrap_or("events.json");
+    let name = dest
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("events.json");
     let tmp = dest.with_file_name(format!(".{name}.{}.tmp", std::process::id()));
     let written = fs::write(&tmp, &bytes).and_then(|()| fs::rename(&tmp, dest));
     if let Err(e) = written {
@@ -408,9 +418,15 @@ mod tests {
     #[test]
     fn labels_start_times() {
         assert_eq!(when_label(None), "heure n.c.");
-        assert_eq!(when_label(Some("2026-11-10T13:00:00+01:00")), "mar 10/11 13:00");
+        assert_eq!(
+            when_label(Some("2026-11-10T13:00:00+01:00")),
+            "mar 10/11 13:00"
+        );
         assert_eq!(when_label(Some("2026-11-14T00:00:00+01:00")), "sam 14/11");
-        assert_eq!(when_label(Some("2024-02-29T08:30:00+01:00")), "jeu 29/02 08:30");
+        assert_eq!(
+            when_label(Some("2024-02-29T08:30:00+01:00")),
+            "jeu 29/02 08:30"
+        );
         assert_eq!(when_label(Some("garbage")), "garbage");
     }
 }
