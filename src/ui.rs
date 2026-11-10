@@ -7,7 +7,7 @@ use ratatui::widgets::{
     ScrollbarState, Wrap,
 };
 
-use crate::app::{App, Focus};
+use crate::app::{App, Focus, PaneRows};
 use crate::data::{self, Bucket, Event, Origin};
 
 const ALL_CITIES: &str = "Toutes les villes";
@@ -33,6 +33,11 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         Layout::horizontal([Constraint::Length(cities_w), Constraint::Min(0)]).areas(body);
     let [events, detail] =
         Layout::vertical([Constraint::Percentage(55), Constraint::Percentage(45)]).areas(right);
+    app.rows = PaneRows {
+        cities: left.height.saturating_sub(2),
+        events: events.height.saturating_sub(2),
+        detail: detail.height.saturating_sub(2),
+    };
 
     draw_header(f, app, header);
     draw_cities(f, app, left, name_w);

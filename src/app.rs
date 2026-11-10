@@ -49,6 +49,14 @@ pub struct Status {
     pub error: bool,
 }
 
+/// Inner height of each pane, in rows.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct PaneRows {
+    pub cities: u16,
+    pub events: u16,
+    pub detail: u16,
+}
+
 pub struct App {
     pub feed: Feed,
     pub cities: Vec<CitySummary>,
@@ -63,6 +71,8 @@ pub struct App {
     pub event_sel: usize,
     /// First visible line of the detail pane; clamped to the content when drawn.
     pub detail_scroll: u16,
+    /// Pane sizes at the last draw, for half-page moves.
+    pub rows: PaneRows,
     pub status: Option<Status>,
     pub opts: Options,
     pending: Option<Receiver<Result<Feed, String>>>,
@@ -90,6 +100,7 @@ impl App {
             event_state: ListState::default(),
             event_sel: 0,
             detail_scroll: 0,
+            rows: PaneRows::default(),
             status: warning.map(|text| Status { text, error: true }),
             opts,
             pending: None,
@@ -194,6 +205,8 @@ impl App {
                 }
                 KeyCode::Up => self.move_city(-1),
                 KeyCode::Down => self.move_city(1),
+                KeyCode::Char('d') if ctrl => self.move_city(self.half_page()),
+                KeyCode::Char('u') if ctrl => self.move_city(-self.half_page()),
                 KeyCode::Char(c) if !ctrl => {
                     let f = format!("{}{c}", self.filter);
                     self.set_filter(f);
@@ -203,6 +216,8 @@ impl App {
             return;
         }
         match key.code {
+            KeyCode::Char('d') if ctrl => self.move_by(self.half_page()),
+            KeyCode::Char('u') if ctrl => self.move_by(-self.half_page()),
             KeyCode::Char('q') => self.quit = true,
             KeyCode::Esc if !self.filter.is_empty() => self.set_filter(String::new()),
             KeyCode::Char('/') => {
@@ -238,6 +253,16 @@ impl App {
             KeyCode::Char('o') => self.open_selected(),
             _ => {}
         }
+    }
+
+    /// Half the focused pane's height, at least one row.
+    fn half_page(&self) -> isize {
+        let rows = match self.focus {
+            Focus::Cities => self.rows.cities,
+            Focus::Events => self.rows.events,
+            Focus::Detail => self.rows.detail,
+        };
+        (rows / 2).max(1) as isize
     }
 
     fn move_by(&mut self, delta: isize) {
@@ -586,6 +611,33 @@ mod tests {
         screen(&mut app, 120, 16);
         press(&mut app, KeyCode::Char('h'));
         press(&mut app, KeyCode::Down);
+        assert_eq!(app.detail_scroll, 0);
+    }
+
+    #[test]
+    fn half_page_moves() {
+        let ctrl = |app: &mut App, c: char| {
+            app.on_key(KeyEvent::new(KeyCode::Char(c), KeyModifiers::CONTROL));
+        };
+        let mut app = app(data::parse(FIXTURE.as_bytes()).unwrap());
+        screen(&mut app, 120, 16);
+        assert!(
+            app.rows.cities > 4 && app.rows.detail >= 2,
+            "{:?}",
+            app.rows
+        );
+
+        // the city list is shorter than half a page: clamps to the last row
+        ctrl(&mut app, 'd');
+        assert_eq!(app.city_state.selected(), Some(2));
+        ctrl(&mut app, 'u');
+        assert_eq!(app.city_state.selected(), Some(0));
+
+        press(&mut app, KeyCode::Tab);
+        press(&mut app, KeyCode::Tab);
+        ctrl(&mut app, 'd');
+        assert_eq!(app.detail_scroll, app.rows.detail / 2);
+        ctrl(&mut app, 'u');
         assert_eq!(app.detail_scroll, 0);
     }
 }
