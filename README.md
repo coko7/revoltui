@@ -113,8 +113,8 @@ While typing a city search, the usual editing keys work:
 | `Ctrl+w` / `Ctrl+Backspace` / `Alt+Backspace` | Delete the word before the cursor |
 | `Backspace` / `Delete` | Delete the character before / under the cursor |
 | `Ctrl+Delete` / `Alt+d` | Delete the word after the cursor |
-| `Ctrl+k` | Delete everything after the cursor |
-| `↑` `↓` / `Ctrl+d` `Ctrl+u` | Move through the city list while typing |
+| `Ctrl+u` / `Ctrl+k` | Delete everything before / after the cursor |
+| `↑` `↓` / `Ctrl+d` | Move through the city list while typing |
 
 ## Data and refreshing
 

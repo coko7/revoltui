@@ -117,8 +117,8 @@ Pendant la saisie d'une recherche, les raccourcis d'édition habituels fonctionn
 | `Ctrl+w` / `Ctrl+Retour arrière` / `Alt+Retour arrière` | Supprimer le mot avant le curseur |
 | `Retour arrière` / `Suppr` | Supprimer le caractère avant / sous le curseur |
 | `Ctrl+Suppr` / `Alt+d` | Supprimer le mot après le curseur |
-| `Ctrl+k` | Supprimer tout ce qui suit le curseur |
-| `↑` `↓` / `Ctrl+d` `Ctrl+u` | Parcourir la liste des villes pendant la saisie |
+| `Ctrl+u` / `Ctrl+k` | Supprimer tout ce qui précède / suit le curseur |
+| `↑` `↓` / `Ctrl+d` | Parcourir la liste des villes pendant la saisie |
 
 ## Données et rafraîchissement
 

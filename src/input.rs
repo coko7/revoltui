@@ -50,6 +50,7 @@ impl Input {
             KeyCode::Char('d') if alt => self.cut(self.cursor, self.word_end()),
             KeyCode::Delete => self.cut(self.cursor, self.next()),
             KeyCode::Char('k') if ctrl => self.cut(self.cursor, self.text.len()),
+            KeyCode::Char('u') if ctrl => self.cut(0, self.cursor),
             KeyCode::Left if ctrl || alt => self.cursor = self.word_start(),
             KeyCode::Char('b') if alt => self.cursor = self.word_start(),
             KeyCode::Right if ctrl || alt => self.cursor = self.word_end(),
@@ -202,8 +203,13 @@ mod tests {
         i.handle(key(KeyCode::Left, CTRL));
         i.handle(key(KeyCode::Char('k'), CTRL));
         assert_eq!(show(&i), "saint |");
+
+        let mut i = input("saint étienne");
+        i.handle(key(KeyCode::Left, CTRL));
+        i.handle(key(KeyCode::Char('u'), CTRL));
+        assert_eq!(show(&i), "|étienne");
         assert!(
-            !i.handle(key(KeyCode::Char('u'), CTRL)),
+            !i.handle(key(KeyCode::Char('d'), CTRL)),
             "not an editing key"
         );
     }

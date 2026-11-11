@@ -188,7 +188,6 @@ impl App {
                 KeyCode::Up => self.move_city(-1),
                 KeyCode::Down => self.move_city(1),
                 KeyCode::Char('d') if ctrl => self.move_city(self.half_page()),
-                KeyCode::Char('u') if ctrl => self.move_city(-self.half_page()),
                 _ => {
                     let before = self.filter.as_str().to_owned();
                     if self.filter.handle(key) && self.filter.as_str() != before {
