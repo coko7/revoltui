@@ -9,6 +9,7 @@ use ratatui::crossterm::event::{self, KeyCode, KeyEvent, KeyEventKind, KeyModifi
 use ratatui::widgets::ListState;
 
 use crate::data::{self, Bucket, CitySummary, Event, Feed, Origin};
+use crate::input::Input;
 use crate::ui;
 
 /// How often a failed background download may be retried.
@@ -44,7 +45,7 @@ pub struct PaneRows {
 pub struct App {
     pub feed: Feed,
     pub cities: Vec<CitySummary>,
-    pub filter: String,
+    pub filter: Input,
     pub searching: bool,
     pub show_ended: bool,
     pub show_cities: bool,
@@ -77,7 +78,7 @@ impl App {
         Self {
             feed,
             cities,
-            filter,
+            filter: Input::new(filter),
             searching: false,
             show_ended,
             show_cities: true,
@@ -113,7 +114,7 @@ impl App {
 
     /// Cities matching the filter that have something to show.
     pub fn visible_cities(&self) -> Vec<&CitySummary> {
-        let q = data::fold(&self.filter);
+        let q = data::fold(self.filter.as_str());
         self.cities
             .iter()
             .filter(|c| c.now + c.next > 0 || (self.show_ended && c.ended > 0))
@@ -181,23 +182,19 @@ impl App {
             match key.code {
                 KeyCode::Esc => {
                     self.searching = false;
-                    self.set_filter(String::new());
+                    self.clear_filter();
                 }
                 KeyCode::Enter => self.searching = false,
-                KeyCode::Backspace => {
-                    let mut f = self.filter.clone();
-                    f.pop();
-                    self.set_filter(f);
-                }
                 KeyCode::Up => self.move_city(-1),
                 KeyCode::Down => self.move_city(1),
                 KeyCode::Char('d') if ctrl => self.move_city(self.half_page()),
                 KeyCode::Char('u') if ctrl => self.move_city(-self.half_page()),
-                KeyCode::Char(c) if !ctrl => {
-                    let f = format!("{}{c}", self.filter);
-                    self.set_filter(f);
+                _ => {
+                    let before = self.filter.as_str().to_owned();
+                    if self.filter.handle(key) && self.filter.as_str() != before {
+                        self.filter_changed();
+                    }
                 }
-                _ => {}
             }
             return;
         }
@@ -205,7 +202,7 @@ impl App {
             KeyCode::Char('d') if ctrl => self.move_by(self.half_page()),
             KeyCode::Char('u') if ctrl => self.move_by(-self.half_page()),
             KeyCode::Char('q') => self.quit = true,
-            KeyCode::Esc if !self.filter.is_empty() => self.set_filter(String::new()),
+            KeyCode::Esc if !self.filter.is_empty() => self.clear_filter(),
             KeyCode::Char('/') => {
                 self.searching = true;
                 self.show_cities = true;
@@ -296,8 +293,13 @@ impl App {
         }
     }
 
-    fn set_filter(&mut self, filter: String) {
-        self.filter = filter;
+    fn clear_filter(&mut self) {
+        self.filter.clear();
+        self.filter_changed();
+    }
+
+    /// The city list changed: start again from the "all cities" row.
+    fn filter_changed(&mut self) {
         self.city_state = ListState::default().with_selected(Some(0));
         self.reset_events();
     }
@@ -672,5 +674,39 @@ mod tests {
         press(&mut app, KeyCode::Char('/'));
         assert!(app.show_cities && app.focus == Focus::Cities);
         assert!(screen(&mut app, 120, 30).contains(legend));
+    }
+
+    #[test]
+    fn edits_search_input() {
+        let ctrl = |app: &mut App, code: KeyCode| {
+            app.on_key(KeyEvent::new(code, KeyModifiers::CONTROL));
+        };
+        let names = |app: &App| -> Vec<String> {
+            app.visible_cities()
+                .iter()
+                .map(|c| c.name.clone())
+                .collect()
+        };
+        let mut app = app(data::parse(FIXTURE.as_bytes()).unwrap());
+        press(&mut app, KeyCode::Char('/'));
+        type_str(&mut app, "paris naz");
+        assert!(names(&app).is_empty());
+
+        ctrl(&mut app, KeyCode::Char('w'));
+        assert_eq!(app.filter.as_str(), "paris ");
+        assert_eq!(names(&app), ["Paris"]);
+
+        // moving the cursor keeps the selected city
+        press(&mut app, KeyCode::Down);
+        ctrl(&mut app, KeyCode::Left);
+        assert_eq!(app.selected_city(), Some("Paris"));
+
+        // typing happens at the cursor, ctrl+backspace (ctrl+h) removes the word before it
+        type_str(&mut app, "x");
+        assert_eq!(app.filter.as_str(), "xparis ");
+        assert!(screen(&mut app, 120, 30).contains(" Villes /xparis "));
+        ctrl(&mut app, KeyCode::Char('h'));
+        assert_eq!(app.filter.as_str(), "paris ");
+        assert_eq!(names(&app), ["Paris"]);
     }
 }

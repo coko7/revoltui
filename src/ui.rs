@@ -99,12 +99,14 @@ fn draw_cities(f: &mut Frame, app: &mut App, area: Rect, name_w: usize) {
     }));
 
     let mut title = vec![Span::raw(" Villes ").bold()];
-    if app.searching || !app.filter.is_empty() {
-        title.push(Span::raw(format!("/{}", app.filter)).yellow());
-        if app.searching {
-            title.push(Span::raw(" ").reversed());
-        }
-        title.push(Span::raw(" "));
+    if app.searching {
+        let (before, at, after) = app.filter.split_at_cursor();
+        let at = at.map_or_else(|| " ".to_string(), String::from);
+        title.push(Span::raw(format!("/{before}")).yellow());
+        title.push(Span::raw(at).yellow().reversed());
+        title.push(Span::raw(format!("{after} ")).yellow());
+    } else if !app.filter.is_empty() {
+        title.push(Span::raw(format!("/{} ", app.filter)).yellow());
     }
     let legend = Line::from(vec![
         Span::raw(" en cours").red(),

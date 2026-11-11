@@ -108,6 +108,18 @@ téléchargées.
 | `Échap` | Effacer le filtre de ville |
 | `q` / `Ctrl+c` | Quitter |
 
+Pendant la saisie d'une recherche, les raccourcis d'édition habituels fonctionnent :
+
+| Touche | Action |
+| --- | --- |
+| `←` `→` / `Ctrl+←` `Ctrl+→` | Déplacer le curseur d'un caractère / d'un mot (`Alt` fonctionne comme `Ctrl`) |
+| `Début` `Fin` / `Ctrl+a` `Ctrl+e` | Début / fin de la recherche |
+| `Ctrl+w` / `Ctrl+Retour arrière` / `Alt+Retour arrière` | Supprimer le mot avant le curseur |
+| `Retour arrière` / `Suppr` | Supprimer le caractère avant / sous le curseur |
+| `Ctrl+Suppr` / `Alt+d` | Supprimer le mot après le curseur |
+| `Ctrl+k` | Supprimer tout ce qui suit le curseur |
+| `↑` `↓` / `Ctrl+d` `Ctrl+u` | Parcourir la liste des villes pendant la saisie |
+
 ## Données et rafraîchissement
 
 Le flux est enregistré dans `~/.cache/manifsendirect/events.json` (ou

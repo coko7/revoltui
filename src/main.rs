@@ -1,6 +1,7 @@
 mod app;
 mod cli;
 mod data;
+mod input;
 mod ui;
 
 use std::io::{self, IsTerminal, Read};
